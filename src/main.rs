@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use backend_rust::auth::AuthService;
 use backend_rust::db::Database;
+use backend_rust::telegram::TelegramNotifier;
 use backend_rust::{config, db, http};
 
 #[tokio::main]
@@ -30,7 +31,13 @@ async fn run() -> Result<(), String> {
         )
     };
 
-    let service = AuthService::new(Arc::new(db), cfg.clone());
+    let mut service = AuthService::new(Arc::new(db), cfg.clone());
+    if !cfg.telegram_bot_token.is_empty() && !cfg.telegram_chat_id.is_empty() {
+        service = service.with_telegram(TelegramNotifier::new(
+            cfg.telegram_bot_token.clone(),
+            cfg.telegram_chat_id.clone(),
+        ));
+    }
     let app = http::router(service);
     let listener = tokio::net::TcpListener::bind(format!("{}:{}", cfg.host, cfg.port))
         .await

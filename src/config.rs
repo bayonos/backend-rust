@@ -21,6 +21,8 @@ pub struct Config {
     pub pbkdf2_iterations: u32,
     pub max_login_attempts: usize,
     pub rate_limit_window_sec: i64,
+    pub telegram_bot_token: String,
+    pub telegram_chat_id: String,
 }
 
 impl Default for Config {
@@ -42,6 +44,8 @@ impl Default for Config {
             pbkdf2_iterations: 210000,
             max_login_attempts: 10,
             rate_limit_window_sec: 60,
+            telegram_bot_token: String::new(),
+            telegram_chat_id: String::new(),
         }
     }
 }
@@ -264,6 +268,8 @@ pub fn load_config(env: &HashMap<String, String>, dotenv_path: &str) -> Config {
     if window > 0 {
         cfg.rate_limit_window_sec = window;
     }
+    cfg.telegram_bot_token = get_env(&merged, &["TELEGRAM_BOT_TOKEN"], "");
+    cfg.telegram_chat_id = get_env(&merged, &["TELEGRAM_CHAT_ID"], "");
     cfg
 }
 

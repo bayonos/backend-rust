@@ -10,6 +10,7 @@ use crate::crypto::{
     verify_password,
 };
 use crate::db::{Database, User, user_json};
+use crate::telegram::TelegramNotifier;
 
 pub struct RateLimiter {
     attempts: Mutex<HashMap<String, Vec<i64>>>,
@@ -53,6 +54,7 @@ pub struct AuthService {
     config: Arc<Config>,
     limiter: Arc<RateLimiter>,
     dummy_hash: Arc<OnceLock<String>>,
+    telegram: Option<Arc<TelegramNotifier>>,
 }
 
 #[derive(Debug)]
@@ -92,7 +94,13 @@ impl AuthService {
             config: Arc::new(config),
             limiter: Arc::new(limiter),
             dummy_hash: Arc::new(OnceLock::new()),
+            telegram: None,
         }
+    }
+
+    pub fn with_telegram(mut self, notifier: TelegramNotifier) -> Self {
+        self.telegram = Some(Arc::new(notifier));
+        self
     }
 
     pub fn now_epoch_seconds() -> i64 {
@@ -277,6 +285,11 @@ impl AuthService {
             Ok(value) => value,
             Err(error) => return fail(500, error),
         };
+        if let Some(notifier) = &self.telegram {
+            if let Err(error) = notifier.notify_new_user(&user).await {
+                eprintln!("[WARN] Failed to send Telegram registration notification: {error}");
+            }
+        }
         let mut result = success(201);
         result.user = Some(user_json(&user));
         result.tokens = Some(tokens);
